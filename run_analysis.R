@@ -1,4 +1,4 @@
-setwd("~/projects/CourseraProgramming/DataScience/getdata/CourseProject")
+setwd("~/projects/CourseraProgramming/DataScience/getdata")
 # download data function
 download_data <- function(url, file){
     file_path <- paste("./data", file, sep = "/")
@@ -83,5 +83,6 @@ colnames(tidy_data)[-c(1:2)] <- paste("mean_", colnames(tidy_data)[-c(1:2)], sep
 # save the results on disk
 write.table(tidy_data, "./data/tidy_data.txt", quote = F, row.name=FALSE)
 # just a test to see the tidy_data.txt file contains correct data
+head(tidy_data[1:4])
 m_s_a <- full_data[(full_data$subject_id == 1 & full_data$activity == "WALKING"),][[3]]
 mean(m_s_a)

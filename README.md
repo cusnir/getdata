@@ -36,9 +36,11 @@ Description of the project
 
 What is provided
 -------------------------------
-* The script `run_analysis.R` to run the analisys on data.
-* CodeBook.md describing how does the script work and what it does, also a description of tidy_data.txt file.
-* Under `data` directory two files
+* The R script `run_analysis.R` to run the analisys on data.
+* Rmd script `run_analysis.Rmd` also can be run by KnitHtml from RStudio, it also does the analisys but also provides documentation about the script
+* CodeBook.md describing tidy_data.txt variables.
+* `run_analysis.Rmd` describing how the script works
+* Under `data` directory there are two files:
     * Sample `tidy_data.txt` file containing the tidy data created per project description.
     * The data for the project  `UCI HAR Dataset.zip` 
 
@@ -46,10 +48,11 @@ What is provided
 How to use the script
 -------------------------------
 
-* Start RStudio or R Console app and open the R script `run_analysis.R`.
+* Start RStudio or R Console app and open the R script `run_analysis.R`
 * Change the parameter of the `setwd` function call to the working directory/folder (i.e., the folder where these the R script file is saved).
-* Run the script by "Source"-ing the the script `run_analysis.R`.
+* Run the script by "Source"-ing the the script `run_analysis.R` in either RStudio or R Console app.
 
 Output produced
 ----------------
 * Tidy dataset file `tidy_dataset.txt` (space-delimited text).
+* Documentation files: `run_analysis.html`, `CodeBook.html` 

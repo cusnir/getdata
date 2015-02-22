@@ -1,0 +1,172 @@
+---
+title: "run_analysis.R"
+author: "Andrei Cusnir"
+output: html_document
+---
+
+Setting current working directory
+```{r}
+setwd("~/projects/CourseraProgramming/DataScience/getdata")
+```
+Creating a download helper function, so that it can be used later
+```{r}
+download_data <- function(url, file){
+    file_path <- paste("./data", file, sep = "/")
+    if (!file.exists(file_path)) {
+        download.file(url, destfile = file_path, method = "curl")
+    }
+}
+```
+Create data folder if it does not exist
+```{r}
+
+if (!file.exists("data")) {
+    dir.create("data")
+}
+```
+Providing url from which to load the dataset zip file
+```{r}
+dataset_url <- "https://d396qusza40orc.cloudfront.net/getdata/projectfiles/UCI%20HAR%20Dataset.zip"
+```
+Download the dataset UCI HAR Dataset.zip in our ./data
+```{r}
+download_data(dataset_url, "UCI HAR Dataset.zip")
+```
+Set the data dir and unzip UCI HAR Dataset.zip archive
+```{r}
+data_dir <- "./data/UCI HAR Dataset"
+unzip("./data/UCI HAR Dataset.zip", exdir = "./data")
+```
+Creating a helper fpath function so that we can use it like this
+
+`fpath("subject", "test")`
+
+to get a path like this
+
+`./data/UCI HAR Dataset/test/subject_test.txt`
+
+or
+
+`fpath("features", "")`
+
+to get a path like this
+
+`./data/UCI HAR Dataset/features.txt`
+
+this will be useful as we are going to load files into table and save files
+```{r}
+fpath <- function(file, type){
+    if(type == ""){
+        paste(data_dir, paste(file, "txt", sep = "."), sep = "/")
+    }else{
+        paste(data_dir, type, paste(file, "_", type, ".txt", sep = ""), sep = "/")
+    }
+    
+}
+```
+Check if full folder exists inside our dataset dir,
+
+if not then create full dir is needed to hold full data set
+```{r}
+if (!file.exists(paste(data_dir, "full", sep = "/"))) {
+    dir.create(paste(data_dir, "full", sep = "/"))
+}
+```
+The file that contain data are very similar so we can use a unix cat analog comand
+
+`cat test_file train_file > full_file`
+
+However in R i could not find a direct cat command similar to unix one,
+so i had to create one that will:
+
+first copy the `data_test.txt` file into a `data_full.txt` file
+and then will append to `data_train.txt` to `data_full.txt`
+
+so in result we get a `data_full.txt` file that presents row merged contents from 
+both test and train set
+```{r}
+merge_data_on <- function(file){
+    # will use overwrite = T option so that 
+    # on a second run we have a clean file to work with
+    file.copy(fpath(file ,"test"), fpath(file, "full"), overwrite = T)
+    file.append(fpath(file ,"full"), fpath(file, "train"))
+}
+```
+1. Using above `merge_data_on` function to
+create a merged set from **test** and **train**, consisting of:
+`X_full.txt`, `y_full.txt`, `subject_full.txt`
+```{r}
+merge_data_on("X")
+merge_data_on("y")
+merge_data_on("subject")
+```
+Read full sets for `X_full.txt`,`y_full.txt` and `subject_full`
+in `X_full`, `y_full` and `subject_full` tables
+```{r}
+X_full <- read.table(fpath("X", "full"), numerals = "no.loss")
+y_full <- read.table(fpath("y", "full"))
+subject_full <- read.table(fpath("subject", "full"))
+```
+2. Extract the measurements on the mean and standard deviation for each measurement.
+
+Reading features.txt to get the list with Features so that we can choose 
+the means and standard deviations for each measurement.
+
+Reading `features.txt` file to get the colnames for each of the 561 cols of X_full table
+Add colnames for these tables.
+```{r}
+features <- read.table(fpath("features", ""), stringsAsFactors = F)
+colnames(features) <- c("nr", "name")
+colnames(X_full) <- features$name
+colnames(y_full) <- "activity"
+colnames(subject_full) <- "subject_id"
+```
+Merge these 3 tables with cbind in one big data frame: `full_data`
+```{r}
+full_data <- cbind(subject_full, y_full, X_full)
+```
+Create an integer vector `mean_std_features` with col numbers for means and standard deviations,
+so that we can subset later only the cols that contain mean or std in them
+
+Will need also `plyr` package to use `arrange` function
+on `full_data` to order the dataset on the subject_id
+```{r}
+library(plyr)
+mean_std_features <- grep("mean|std", features$name)
+full_data <- arrange(full_data, subject_id)
+```
+Now it is the part with **Extract the measurements with mean and standard deviation**
+
+Extract mean and std data cols from X_full measurement dataset
+and cbind it with subjects and activities datasets in a new dataset `mean_std_data`
+```{r}
+mean_std_data <- cbind(subject_full, y_full, X_full[, mean_std_features])
+```
+3. Use descriptive activity names to name the activities in the data set
+```{r}
+activity_labels <- read.table(fpath("activity_labels", ""))
+```
+4. Appropriately label the data set with descriptive variable names.
+Will use `factor` function to accomplish that
+```{r}
+full_data$activity <- factor(full_data$activity, levels=activity_labels$V1, labels=activity_labels$V2)
+```
+5. Create tidy data set with the average of each variable for each activity and each subject.
+
+Using ddply function from `plyr` package, will apply `colMeans` to every col except first two cols.
+
+Also will add prefix `_mean` to colnames on which we calculate the mean.
+```{r}
+tidy_data <- ddply(mean_std_data, .(subject_id, activity), .fun=function(x){ colMeans(x[,-c(1:2)]) })
+colnames(tidy_data)[-c(1:2)] <- paste("mean_", colnames(tidy_data)[-c(1:2)], sep="")
+```
+Save the `tidy_data.txt` file
+```{r}
+write.table(tidy_data, "./data/tidy_data.txt", quote = F, row.name=FALSE)
+```
+Just a test to see the `tidy_data.txt` file contains correct entry for first subject for walking activity
+```{r}
+head(tidy_data[1:4])
+m_s_a <- full_data[(full_data$subject_id == 1 & full_data$activity == "WALKING"),][[3]]
+mean(m_s_a)
+```
